@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
@@ -8,6 +7,6 @@ export default defineConfig({
   },
   datasource: {
     // Use the direct (unpooled) URL for migrations — required by Neon
-    url: process.env.DATABASE_URL_UNPOOLED,
+    url: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL,
   },
 });
