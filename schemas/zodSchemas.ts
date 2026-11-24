@@ -50,3 +50,16 @@ export const LessonSchema = z.object({
 
 export type LessonSchemaType = z.infer<typeof LessonSchema>;
 
+export const LessonEditSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Lesson title is required")
+    .max(100, "Lesson title is too long"),
+  description: z.string().optional().nullable(),
+  thumbnailKey: z.string().optional().nullable(),
+  videoKey: z.string().optional().nullable(),
+});
+
+export type LessonEditSchemaType = z.infer<typeof LessonEditSchema>;
+export type LessonEditSchemaInput = z.input<typeof LessonEditSchema>;
+

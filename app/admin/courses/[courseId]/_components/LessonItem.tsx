@@ -15,11 +15,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { GripVertical, Trash2, Loader2, FileVideo } from "lucide-react";
+import { GripVertical, Trash2, Loader2, FileVideo, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { deleteLesson } from "@/app/admin/courses/[courseId]/action";
 import type { AdminCourseWithChapters } from "@/app/data/admin/admin-get-course";
 import { cn } from "cn";
+import Link from "next/link";
 
 export type Lesson = AdminCourseWithChapters["chapters"][number]["lessons"][number];
 
@@ -33,6 +34,7 @@ export interface LessonItemProps {
 export function LessonItem({
   lesson,
   courseId,
+  chapterId,
   onDeleted,
 }: LessonItemProps) {
   const [isPending, startTransition] = useTransition();
@@ -84,6 +86,17 @@ export function LessonItem({
       <FileVideo className="size-4 shrink-0 text-muted-foreground" />
 
       <span className="flex-1 truncate">{lesson.title}</span>
+
+      {/* Edit lesson */}
+      {chapterId && (
+        <Link
+          href={`/admin/courses/${courseId}/${chapterId}/${lesson.id}`}
+          aria-label={`Edit lesson "${lesson.title}"`}
+          className="inline-flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+        >
+          <Pencil className="size-3.5" />
+        </Link>
+      )}
 
       {/* Delete lesson */}
       <AlertDialog>
