@@ -21,6 +21,8 @@ export interface RenderStateProps {
   fileName?: string | null;
   error?: string | null;
   onRemove?: (e: React.MouseEvent) => void;
+  /** Max file size in MB, used for display text. Defaults to 10. */
+  maxSizeMb?: number;
 }
 
 export function RenderState({
@@ -33,6 +35,7 @@ export function RenderState({
   fileName,
   error,
   onRemove,
+  maxSizeMb = 10,
 }: RenderStateProps) {
   // Store the URL that failed to load. If displayUrl changes to a new file,
   // the error resets automatically during render without needing a useEffect!
@@ -174,7 +177,7 @@ export function RenderState({
         drag and drop
       </p>
       <p className="text-xs text-muted-foreground mt-1">
-        PNG, JPG, JPEG, WEBP or GIF (max. 10MB)
+        PNG, JPG, JPEG, WEBP or GIF (max. {maxSizeMb}MB)
       </p>
     </div>
   );

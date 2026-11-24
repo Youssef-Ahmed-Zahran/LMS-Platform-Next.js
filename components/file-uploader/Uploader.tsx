@@ -12,6 +12,8 @@ export interface UploaderProps {
   onRemove?: () => void;
   className?: string;
   endpoint?: string;
+  /** Max file size in MB. Defaults to 10. */
+  maxSizeMb?: number;
 }
 
 export function Uploader({
@@ -20,6 +22,7 @@ export function Uploader({
   onRemove,
   className,
   endpoint = "/api/s3/upload",
+  maxSizeMb = 10,
 }: UploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -145,7 +148,7 @@ export function Uploader({
     },
     maxFiles: 1,
     multiple: false,
-    maxSize: 10 * 1024 * 1024, // 10 MB limit
+    maxSize: maxSizeMb * 1024 * 1024,
     disabled: isUploading,
   });
 
@@ -187,7 +190,7 @@ export function Uploader({
       console.error("[DELETE_ERROR]", err);
       toast.error(
         err instanceof Error ? err.message : "Failed to delete from storage",
-        { id: toastId }
+        { id: toastId },
       );
     } finally {
       setIsDeleting(false);
@@ -205,7 +208,8 @@ export function Uploader({
         isDragActive && "border-primary bg-primary/5",
         isUploading && "cursor-not-allowed pointer-events-none",
         hasImage && !error && "p-2 border-solid border-border cursor-default",
-        error && "border-destructive/60 bg-destructive/5 hover:border-destructive hover:bg-destructive/10 cursor-pointer",
+        error &&
+          "border-destructive/60 bg-destructive/5 hover:border-destructive hover:bg-destructive/10 cursor-pointer",
         className,
       )}
     >
@@ -220,6 +224,7 @@ export function Uploader({
         fileName={fileName}
         error={error}
         onRemove={handleRemove}
+        maxSizeMb={maxSizeMb}
       />
     </div>
   );
