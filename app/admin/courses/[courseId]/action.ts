@@ -33,7 +33,7 @@ export async function updateCourse(
   }
 
   const { data: existing } = await tryCatch(
-    prisma.course.findUnique({ where: { id: courseId, userId: session.user.id }, select: { id: true } })
+    prisma.course.findUnique({ where: { id: courseId, userId: session.user.id }, select: { id: true, slug: true } })
   );
   if (!existing) return { status: "error", message: "Course not found." };
 
@@ -50,8 +50,12 @@ export async function updateCourse(
   // updateTag: immediate cache invalidation inside Server Actions (read-your-own-writes)
   updateTag(`course:${courseId}`);
   updateTag(`courses-list:${session.user.id}`);
+  updateTag("public-courses-list");
+  updateTag(`public-course:${existing.slug}`);
+  updateTag(`public-course:${validation.data.slug}`);
   revalidatePath(`/admin/courses`);
   revalidatePath(`/admin/courses/${courseId}/edit`);
+  revalidatePath("/courses");
   return { status: "success", message: "Course updated successfully!", data: { id: courseId } };
 }
 
@@ -62,7 +66,7 @@ export async function deleteCourse(courseId: string): Promise<ApiResponse<null>>
   const { session } = adminCheck;
 
   const { data: existing } = await tryCatch(
-    prisma.course.findUnique({ where: { id: courseId, userId: session.user.id }, select: { id: true } })
+    prisma.course.findUnique({ where: { id: courseId, userId: session.user.id }, select: { id: true, slug: true } })
   );
   if (!existing) return { status: "error", message: "Course not found." };
 
@@ -71,7 +75,10 @@ export async function deleteCourse(courseId: string): Promise<ApiResponse<null>>
 
   updateTag(`course:${courseId}`);
   updateTag(`courses-list:${session.user.id}`);
+  updateTag("public-courses-list");
+  updateTag(`public-course:${existing.slug}`);
   revalidatePath("/admin/courses");
+  revalidatePath("/courses");
   return { status: "success", message: "Course deleted successfully!", data: null };
 }
 

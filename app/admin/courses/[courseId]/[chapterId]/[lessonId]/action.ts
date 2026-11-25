@@ -46,7 +46,7 @@ export async function updateLesson(
   const { data: existing } = await tryCatch(
     prisma.lesson.findUnique({
       where: { id: lessonId },
-      select: { id: true, chapter: { select: { courseId: true } } },
+      select: { id: true, chapter: { select: { courseId: true, course: { select: { slug: true } } } } },
     }),
   );
   if (!existing || existing.chapter.courseId !== courseId) {
@@ -67,6 +67,7 @@ export async function updateLesson(
   if (error) return { status: "error", message: "Failed to update lesson." };
 
   updateTag(`course:${courseId}`);
+  updateTag(`public-course:${existing.chapter.course.slug}`);
   revalidatePath(`/admin/courses/${courseId}/edit`);
   revalidatePath(`/admin/courses/${courseId}/${chapterId}/${lessonId}`);
   return {

@@ -6,7 +6,7 @@ import arcjet, { detectBot, request, slidingWindow } from "@/lib/arcjet";
 import { prisma } from "@/lib/db";
 import { CourseSchema, CourseSchemaInput } from "@/schemas/zodSchemas";
 import { ApiResponse } from "@/types";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 // Configure Arcjet protection rules for course creation:
 // 1. Base shield (DDoS / attacks) from lib/arcjet.ts
@@ -127,7 +127,11 @@ export async function CreateCourse(
     };
   }
 
+  updateTag(`courses-list:${session.user.id}`);
+  updateTag("public-courses-list");
+  updateTag(`public-course:${course.slug}`);
   revalidatePath("/admin/courses");
+  revalidatePath("/courses");
 
   return {
     status: "success",
