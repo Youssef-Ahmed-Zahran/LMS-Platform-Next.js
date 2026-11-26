@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdminAction } from "@/app/data/admin/require-admin";
-import arcjet, { detectBot, slidingWindow, request } from "@/lib/arcjet";
+import arcjet, { slidingWindow, request } from "@/lib/arcjet";
 import { prisma } from "@/lib/db";
 import { tryCatch } from "@/hooks/try-catch";
 import { LessonEditSchema, LessonEditSchemaInput } from "@/schemas/zodSchemas";
@@ -9,7 +9,6 @@ import { ApiResponse } from "@/types";
 import { revalidatePath, updateTag } from "next/cache";
 
 const lessonArcjet = arcjet
-  .withRule(detectBot({ mode: "LIVE", allow: [] }))
   .withRule(slidingWindow({ mode: "LIVE", interval: "1m", max: 20 }));
 
 // ── Update Lesson ──────────────────────────────────────────────────────────

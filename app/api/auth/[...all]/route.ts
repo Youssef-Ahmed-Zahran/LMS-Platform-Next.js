@@ -7,7 +7,6 @@ import {
   type EmailOptions,
   type ProtectSignupOptions,
   type SlidingWindowRateLimitOptions,
-  detectBot,
   protectSignup,
   slidingWindow,
 } from "@arcjet/next";
@@ -71,15 +70,14 @@ async function protect(req: NextRequest): Promise<ArcjetDecision> {
         .withRule(protectSignup(signupOptions))
         .protect(req, { email: body.email, fingerprint: userId });
     } else {
-      // Otherwise use rate limit and detect bot
+      // Otherwise use rate limit
       return arcjet
-        .withRule(detectBot(botOptions))
         .withRule(slidingWindow(rateLimitOptions))
         .protect(req, { fingerprint: userId });
     }
   } else {
     // For all other auth requests
-    return arcjet.withRule(detectBot(botOptions)).protect(req, { fingerprint: userId });
+    return arcjet.protect(req, { fingerprint: userId });
   }
 }
 

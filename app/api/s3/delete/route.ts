@@ -1,4 +1,4 @@
-import arcjet, { detectBot, slidingWindow } from "@/lib/arcjet";
+import arcjet, { slidingWindow } from "@/lib/arcjet";
 import { requireAdmin } from "@/app/data/admin/require-admin";
 import { s3 } from "@/lib/S3Client";
 import ip from "@arcjet/ip";
@@ -12,22 +12,14 @@ const deleteRequestSchema = z.object({
 
 // Configure Arcjet protection rules for delete operations:
 // 1. Base shield (DDoS / attacks) from lib/arcjet.ts
-// 2. Bot detection: block automated scrapers/bots from deleting files
-// 3. Sliding window rate limit: max 2 deletions per minute per user/IP
-const deleteArcjet = arcjet
-  .withRule(
-    detectBot({
-      mode: "LIVE",
-      allow: [],
-    })
-  )
-  .withRule(
-    slidingWindow({
-      mode: "LIVE",
-      interval: "1m",
-      max: 2,
-    })
-  );
+// 2. Sliding window rate limit: max 2 deletions per minute per user/IP
+const deleteArcjet = arcjet.withRule(
+  slidingWindow({
+    mode: "LIVE",
+    interval: "1m",
+    max: 2,
+  })
+);
 
 export async function POST(req: NextRequest) {
   try {

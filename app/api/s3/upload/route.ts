@@ -1,4 +1,4 @@
-import arcjet, { detectBot, slidingWindow } from "@/lib/arcjet";
+import arcjet, { slidingWindow } from "@/lib/arcjet";
 import { requireAdmin } from "@/app/data/admin/require-admin";
 import { s3 } from "@/lib/S3Client";
 import ip from "@arcjet/ip";
@@ -25,22 +25,14 @@ const presignedSchema = z.object({
 
 // Configure Arcjet protection rules for uploads:
 // 1. Base shield (DDoS / attacks) from lib/arcjet.ts
-// 2. Bot detection: block automated scrapers/bots from spamming presigned URLs
-// 3. Sliding window rate limit: max 10 upload requests per minute per user/IP
-const uploadArcjet = arcjet
-  .withRule(
-    detectBot({
-      mode: "LIVE",
-      allow: [],
-    })
-  )
-  .withRule(
-    slidingWindow({
-      mode: "LIVE",
-      interval: "1m",
-      max: 2,
-    })
-  );
+// 2. Sliding window rate limit: max 2 upload requests per minute per user/IP
+const uploadArcjet = arcjet.withRule(
+  slidingWindow({
+    mode: "LIVE",
+    interval: "1m",
+    max: 2,
+  })
+);
 
 export async function POST(req: NextRequest) {
   try {

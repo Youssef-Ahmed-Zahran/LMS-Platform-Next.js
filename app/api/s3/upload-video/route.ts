@@ -1,4 +1,4 @@
-import arcjet, { detectBot, slidingWindow } from "@/lib/arcjet";
+import arcjet, { slidingWindow } from "@/lib/arcjet";
 import { requireAdmin } from "@/app/data/admin/require-admin";
 import { s3 } from "@/lib/S3Client";
 import ip from "@arcjet/ip";
@@ -26,7 +26,6 @@ const presignedSchema = z.object({
 });
 
 const uploadArcjet = arcjet
-  .withRule(detectBot({ mode: "LIVE", allow: [] }))
   .withRule(slidingWindow({ mode: "LIVE", interval: "1m", max: 5 }));
 
 export async function POST(req: NextRequest) {
