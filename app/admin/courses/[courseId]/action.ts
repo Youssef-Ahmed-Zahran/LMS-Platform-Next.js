@@ -1,15 +1,15 @@
 "use server";
 
 import { requireAdminAction } from "@/app/data/admin/require-admin";
-import arcjet, { detectBot, request, slidingWindow } from "@/lib/arcjet";
+import arcjet, { request, slidingWindow } from "@/lib/arcjet";
 import { prisma } from "@/lib/db";
+import { stripe } from "@/lib/stripe";
 import { tryCatch } from "@/hooks/try-catch";
 import { CourseSchema, CourseSchemaInput } from "@/schemas/zodSchemas";
 import { ApiResponse } from "@/types";
 import { revalidatePath, updateTag } from "next/cache";
 
 const courseArcjet = arcjet
-  .withRule(detectBot({ mode: "LIVE", allow: [] }))
   .withRule(slidingWindow({ mode: "LIVE", interval: "1m", max: 20 }));
 
 // ── Update Course ──────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ export async function updateCourse(
   }
 
   const { data: existing } = await tryCatch(
-    prisma.course.findUnique({ where: { id: courseId, userId: session.user.id }, select: { id: true, slug: true } })
+    prisma.course.findUnique({ where: { id: courseId, userId: session.user.id }, select: { id: true, slug: true, price: true, stripePriceId: true } })
   );
   if (!existing) return { status: "error", message: "Course not found." };
 
@@ -42,8 +42,45 @@ export async function updateCourse(
   );
   if (slugConflict) return { status: "error", message: "A course with this slug already exists." };
 
+  // If the price changed, we must create a new Stripe Price (Stripe prices are immutable)
+  // and deactivate the old one.
+  let newStripePriceId: string | undefined;
+  if (validation.data.price !== existing.price) {
+    // Find the product attached to the existing price so we reuse it
+    if (existing.stripePriceId) {
+      const { data: oldStripePrice } = await tryCatch(
+        stripe.prices.retrieve(existing.stripePriceId)
+      );
+
+      if (oldStripePrice) {
+        const { data: newStripePrice, error: newPriceError } = await tryCatch(
+          stripe.prices.create({
+            product: oldStripePrice.product as string,
+            unit_amount: Math.round(validation.data.price * 100),
+            currency: "usd",
+          })
+        );
+
+        if (newPriceError || !newStripePrice) {
+          return { status: "error", message: "Failed to update Stripe price. Course not saved." };
+        }
+
+        // Deactivate old price so it no longer appears in Stripe dashboards
+        await stripe.prices.update(existing.stripePriceId, { active: false });
+
+        newStripePriceId = newStripePrice.id;
+      }
+    }
+  }
+
   const { error } = await tryCatch(
-    prisma.course.update({ where: { id: courseId }, data: { ...validation.data } })
+    prisma.course.update({
+      where: { id: courseId },
+      data: {
+        ...validation.data,
+        ...(newStripePriceId ? { stripePriceId: newStripePriceId } : {}),
+      },
+    })
   );
   if (error) return { status: "error", message: "Failed to update course." };
 

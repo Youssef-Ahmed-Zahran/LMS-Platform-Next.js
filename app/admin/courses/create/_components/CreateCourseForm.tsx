@@ -25,6 +25,7 @@ import { Uploader } from "@/components/file-uploader/Uploader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useConfetti } from "@/hooks/use-confetti";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import slugify from "slugify";
@@ -42,6 +43,7 @@ import {
 export function CreateCourseForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { triggerConfetti } = useConfetti();
 
   const {
     handleSubmit,
@@ -82,6 +84,7 @@ export function CreateCourseForm() {
       const res = await CreateCourse(values);
 
       if (res.status === "success") {
+        triggerConfetti();
         toast.success(res.message);
         router.push("/admin/courses");
       } else {

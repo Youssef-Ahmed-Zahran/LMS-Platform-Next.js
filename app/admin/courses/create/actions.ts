@@ -2,30 +2,23 @@
 
 import { tryCatch } from "@/hooks/try-catch";
 import { requireAdminAction } from "@/app/data/admin/require-admin";
-import arcjet, { detectBot, request, slidingWindow } from "@/lib/arcjet";
+import arcjet, { request, slidingWindow } from "@/lib/arcjet";
 import { prisma } from "@/lib/db";
+import { stripe } from "@/lib/stripe";
 import { CourseSchema, CourseSchemaInput } from "@/schemas/zodSchemas";
 import { ApiResponse } from "@/types";
 import { revalidatePath, updateTag } from "next/cache";
 
 // Configure Arcjet protection rules for course creation:
 // 1. Base shield (DDoS / attacks) from lib/arcjet.ts
-// 2. Bot detection: block automated scrapers/bots
-// 3. Sliding window rate limit: max 5 course creations per minute per admin
-const createCourseArcjet = arcjet
-  .withRule(
-    detectBot({
-      mode: "LIVE",
-      allow: [],
-    })
-  )
-  .withRule(
-    slidingWindow({
-      mode: "LIVE",
-      interval: "1m",
-      max: 5,
-    })
-  );
+// 2. Sliding window rate limit: max 5 course creations per minute per admin
+const createCourseArcjet = arcjet.withRule(
+  slidingWindow({
+    mode: "LIVE",
+    interval: "1m",
+    max: 5,
+  })
+);
 
 export async function CreateCourse(
   data: CourseSchemaInput
@@ -96,7 +89,42 @@ export async function CreateCourse(
     };
   }
 
-  // 5. Create the course in the database using the tryCatch wrapper
+  // 5. Create a Stripe Product + Price so we have a stable stripePriceId
+  const { data: stripeProduct, error: stripeProductError } = await tryCatch(
+    stripe.products.create({
+      name: validation.data.title,
+      description: validation.data.smallDescription,
+      metadata: { slug: validation.data.slug },
+    })
+  );
+
+  if (stripeProductError || !stripeProduct) {
+    return {
+      status: "error",
+      message: "Failed to create Stripe product. Please try again.",
+      error: stripeProductError,
+    };
+  }
+
+  const { data: stripePrice, error: stripePriceError } = await tryCatch(
+    stripe.prices.create({
+      product: stripeProduct.id,
+      unit_amount: Math.round(validation.data.price * 100), // in cents
+      currency: "usd",
+    })
+  );
+
+  if (stripePriceError || !stripePrice) {
+    // Clean up the orphaned product before bailing
+    await stripe.products.update(stripeProduct.id, { active: false });
+    return {
+      status: "error",
+      message: "Failed to create Stripe price. Please try again.",
+      error: stripePriceError,
+    };
+  }
+
+  // 6. Create the course in the database with the Stripe Price ID
   const { data: course, error: createError } = await tryCatch(
     prisma.course.create({
       data: {
@@ -111,6 +139,7 @@ export async function CreateCourse(
         slug: validation.data.slug,
         status: validation.data.status,
         userId: session.user.id,
+        stripePriceId: stripePrice.id,
       },
       select: {
         id: true,
@@ -120,6 +149,9 @@ export async function CreateCourse(
   );
 
   if (createError || !course) {
+    // Clean up Stripe objects so they don't become orphans
+    await stripe.prices.update(stripePrice.id, { active: false });
+    await stripe.products.update(stripeProduct.id, { active: false });
     return {
       status: "error",
       message: "Failed to create course. Please try again.",
