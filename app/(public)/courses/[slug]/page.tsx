@@ -10,6 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookOpen, Clock, GraduationCap } from "lucide-react";
 import { CourseCurriculum } from "./_components/CourseCurriculum";
 import { CourseEnrollCard } from "./_components/CourseEnrollCard";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { connection } from "next/server";
+import { checkIfCourseBought } from "@/app/data/user/user-is-enrolled";
 
 interface SingleCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -62,6 +66,13 @@ async function SingleCourseContent({
   if (!course) {
     notFound();
   }
+
+  // Check whether the current user has already purchased this course
+  await connection(); // opts into dynamic rendering — prevents Date.now() prerender error
+  const session = await auth.api.getSession({ headers: await headers() });
+  const isEnrolled = session?.user
+    ? await checkIfCourseBought(session.user.id, course.id)
+    : false;
 
   const totalLessons = course.chapters.reduce(
     (sum, chapter) => sum + chapter.lessons.length,
@@ -147,6 +158,8 @@ async function SingleCourseContent({
       {/* Right Column: Sticky Demo Payment Card */}
       <div className="lg:col-span-1">
         <CourseEnrollCard
+          courseId={course.id}
+          slug={course.slug}
           title={course.title}
           price={course.price}
           duration={course.duration}
@@ -154,6 +167,7 @@ async function SingleCourseContent({
           category={course.category}
           chaptersCount={course.chapters.length}
           lessonsCount={totalLessons}
+          isEnrolled={isEnrolled}
         />
       </div>
     </div>

@@ -1,35 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   BookOpen,
   CheckCircle2,
   Clock,
-  CreditCard,
   GraduationCap,
   ShieldCheck,
 } from "lucide-react";
-import { toast } from "sonner";
+import { EnrollmentButton } from "./EnrollmentButton";
 
 interface CourseEnrollCardProps {
+  courseId: string;
+  slug: string;
   title: string;
   price: number;
   duration: number;
@@ -37,9 +27,18 @@ interface CourseEnrollCardProps {
   category: string;
   chaptersCount: number;
   lessonsCount: number;
+  isEnrolled: boolean;
 }
 
+const INCLUSIONS = [
+  { icon: CheckCircle2, label: "Full lifetime access" },
+  { icon: CheckCircle2, label: "Certificate of completion" },
+  { icon: ShieldCheck, label: "30-day money-back guarantee" },
+];
+
 export function CourseEnrollCard({
+  courseId,
+  slug,
   title,
   price,
   duration,
@@ -47,17 +46,9 @@ export function CourseEnrollCard({
   category,
   chaptersCount,
   lessonsCount,
+  isEnrolled,
 }: CourseEnrollCardProps) {
-  const [open, setOpen] = useState(false);
-
   const formattedPrice = price === 0 ? "Free" : `$${price.toFixed(2)}`;
-
-  const handleDemoCheckout = () => {
-    setOpen(false);
-    toast.success("Demo enrollment triggered!", {
-      description: `Payment integration pending for "${title}".`,
-    });
-  };
 
   return (
     <Card className="sticky top-24 border shadow-md">
@@ -66,9 +57,11 @@ export function CourseEnrollCard({
           <span className="text-3xl font-bold tracking-tight">
             {formattedPrice}
           </span>
-          <Badge variant="secondary" className="capitalize">
-            Demo Checkout
-          </Badge>
+          {isEnrolled && (
+            <Badge variant="secondary" className="capitalize">
+              Enrolled
+            </Badge>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
           Full lifetime access · Certificate of completion
@@ -76,58 +69,16 @@ export function CourseEnrollCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger
-            render={
-              <Button size="lg" className="w-full font-semibold">
-                <CreditCard className="size-4 mr-2" />
-                {price === 0 ? "Enroll for Free" : "Enroll Now"}
-              </Button>
-            }
-          />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Demo Payment Checkout</DialogTitle>
-              <DialogDescription>
-                Payment integration is not connected yet. This is a preview of
-                the enrollment flow for <strong>{title}</strong>.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="rounded-lg border bg-muted/40 p-4 space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Course</span>
-                <span className="font-medium truncate max-w-[220px]">
-                  {title}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-bold text-base">{formattedPrice}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="size-4 text-primary shrink-0" />
-                <span>
-                  Stripe / payment provider will be integrated here later.
-                </span>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleDemoCheckout}>
-                <CheckCircle2 className="size-4 mr-2" />
-                Simulate Enrollment
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <EnrollmentButton
+          courseId={courseId}
+          slug={slug}
+          price={price}
+          isEnrolled={isEnrolled}
+        />
 
         <Separator />
 
+        {/* What's included */}
         <div className="space-y-3 text-sm">
           <h4 className="font-semibold">What&apos;s included:</h4>
           <ul className="space-y-2.5 text-muted-foreground">
@@ -148,12 +99,20 @@ export function CourseEnrollCard({
                 {level.toLowerCase()} level · {category}
               </span>
             </li>
+            {INCLUSIONS.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex items-center gap-2.5">
+                <Icon className="size-4 text-primary shrink-0" />
+                <span>{label}</span>
+              </li>
+            ))}
           </ul>
         </div>
       </CardContent>
 
       <CardFooter className="pt-0 text-xs text-muted-foreground justify-center">
-        30-day money-back guarantee (Demo UI)
+        {isEnrolled
+          ? `You are enrolled in "${title}"`
+          : "Secure checkout powered by Stripe"}
       </CardFooter>
     </Card>
   );
